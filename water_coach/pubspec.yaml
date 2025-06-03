@@ -1,0 +1,23 @@
+name: water_coach
+description: A new Flutter project.
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0' # Adjusted to a common current range
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2 # A common package for iOS style icons
+  shared_preferences: ^2.2.0 # Added shared_preferences (example version)
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0 # Recommended lints
+
+flutter:
+  uses-material-design: true
