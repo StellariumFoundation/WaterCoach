@@ -1,3 +1,7 @@
+import 'dart:async'; // For Future.delayed
+import 'dart:collection'; // For Queue
+import 'dart:math'; // For Random
+
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
@@ -12,63 +16,154 @@ class AICoachChatWidget extends StatefulWidget {
 }
 
 enum STTState { idle, listening, processing, error }
+enum TTSState { idle, speaking, error }
 
 class _AICoachChatWidgetState extends State<AICoachChatWidget> {
   final TextEditingController _textController = TextEditingController();
   final stt.SpeechToText _speech = stt.SpeechToText();
   final FlutterTts _flutterTts = FlutterTts();
   STTState _sttState = STTState.idle;
+  TTSState _ttsState = TTSState.idle;
+  final Queue<String> _ttsQueue = Queue<String>();
+  bool _isWaitingForAI = false;
+
+  // Placeholder for AI backend interaction
+  Future<String> _sendToAiBackend(String userInput) async {
+    print("Sending to AI Backend: $userInput");
+    await Future.delayed(Duration(seconds: 1 + Random().nextInt(2))); // Simulate network delay 1-2 seconds
+
+    // Simulate occasional errors
+    if (Random().nextInt(5) == 0) { // 1 in 5 chance of error
+      throw Exception("Simulated AI Backend Error: Could not connect.");
+    }
+
+    return "AI: You said '$userInput'. Thanks for sharing!";
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initTts();
+  }
+
+  void _initTts() {
+    _flutterTts.setStartHandler(() {
+      if (mounted) setState(() => _ttsState = TTSState.speaking);
+    });
+
+    _flutterTts.setCompletionHandler(() {
+      if (mounted) setState(() => _ttsState = TTSState.idle);
+      _processMessageQueue();
+    });
+
+    _flutterTts.setErrorHandler((msg) {
+      if (mounted) setState(() => _ttsState = TTSState.error);
+      print("TTS Error: $msg");
+      _processMessageQueue(); // Try to process next message even if current one errors
+    });
+  }
 
   final List<Map<String, dynamic>> _messages = [
-    {'text': 'Hello! How can I help you today?', 'isUserMessage': false},
-    {'text': 'Hi there! I have a question about my workout plan.', 'isUserMessage': true},
-    {'text': 'Sure, ask away!', 'isUserMessage': false},
+    // Initial messages can be kept or removed if AI interaction starts immediately
+    // {'text': 'Hello! How can I help you today?', 'isUserMessage': false},
   ];
 
-  void _sendMessage() {
-    if (_textController.text.isNotEmpty) {
-      setState(() {
-        _messages.add({
-          'text': _textController.text,
-          'isUserMessage': true,
-        });
-      });
-      _textController.clear();
-      // Here you would typically also send the message to the AI
-      // and add its response to the _messages list.
-      // For now, we'll simulate an AI response after a short delay.
-      Future.delayed(const Duration(milliseconds: 500), () {
-        final aiResponse = 'Thanks for your message! I am processing it. This is a spoken response.';
+  void _sendMessage() async {
+    if (_textController.text.isEmpty) return;
+
+    final userInput = _textController.text;
+    _textController.clear();
+
+    // Add user message to UI
+    setState(() {
+      _messages.add({'text': userInput, 'isUserMessage': true});
+      _isWaitingForAI = true;
+    });
+
+    try {
+      final aiResponseText = await _sendToAiBackend(userInput);
+      if (mounted) {
         setState(() {
-          _messages.add({
-            'text': aiResponse,
-            'isUserMessage': false,
-          });
+          _messages.add({'text': aiResponseText, 'isUserMessage': false});
         });
-        _speak(aiResponse);
-      });
+        _speak(aiResponseText);
+      }
+    } catch (e) {
+      print("Error from AI Backend: $e");
+      final errorMessage = "Error: Could not connect to AI. Please try again.";
+      if (mounted) {
+        setState(() {
+          _messages.add({'text': errorMessage, 'isUserMessage': false, 'isError': true});
+        });
+        _speak(errorMessage);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isWaitingForAI = false;
+        });
+      }
     }
   }
 
-  Future<void> _speak(String text) async {
-    // iOS specific configuration for audio session
-    if (Theme.of(context).platform == TargetPlatform.iOS) {
-      await _flutterTts.setSharedInstance(true);
-      await _flutterTts.setIosAudioCategory(
-          IosTextToSpeechAudioCategory.ambient,
-          [
-            IosTextToSpeechAudioCategoryOptions.allowBluetooth,
-            IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
-            IosTextToSpeechAudioCategoryOptions.mixWithOthers,
-          ],
-          IosTextToSpeechAudioMode.voicePrompt);
+  void _speak(String text) {
+    if (text.trim().isEmpty) return;
+    _ttsQueue.add(text);
+    _processMessageQueue();
+  }
+
+  Future<void> _processMessageQueue() async {
+    if (_ttsState == TTSState.speaking || _ttsQueue.isEmpty) {
+      return;
     }
 
-    // Basic TTS setup - can be expanded with more configurations
-    await _flutterTts.setLanguage("en-US"); // Example: set language
-    await _flutterTts.setPitch(1.0); // Default is 1.0
-    await _flutterTts.setSpeechRate(0.5); // Default is 0.5 for normal speed
-    await _flutterTts.speak(text);
+    // Reset error state before attempting to speak again
+    if (_ttsState == TTSState.error) {
+       if (mounted) setState(() => _ttsState = TTSState.idle);
+    }
+
+    final String textToSpeak = _ttsQueue.removeFirst();
+
+    // TTS parameters - can be made configurable
+    const String language = "en-US";
+    const double speechRate = 0.5; // 0.0 to 1.0, 0.5 is normal
+    const double pitch = 1.0;      // 0.5 to 2.0, 1.0 is normal
+
+    try {
+      // iOS specific configuration for audio session - ensure this is safe to call multiple times
+      // or move to a one-time setup if possible and preferred.
+      if (Theme.of(context).platform == TargetPlatform.iOS) {
+        await _flutterTts.setSharedInstance(true); // Safe to call multiple times
+        await _flutterTts.setIosAudioCategory( // Safe to call multiple times
+            IosTextToSpeechAudioCategory.ambient,
+            [
+              IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+              IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+              IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+            ],
+            IosTextToSpeechAudioMode.voicePrompt);
+      }
+
+      await _flutterTts.setLanguage(language);
+      await _flutterTts.setSpeechRate(speechRate);
+      await _flutterTts.setPitch(pitch);
+
+      // awaitSpeakCompletion is not needed here as handlers manage state and queue.
+      // Direct call to speak. setStartHandler will set state to speaking.
+      await _flutterTts.speak(textToSpeak);
+
+    } catch (e) {
+      print("Error occurred in _processMessageQueue: $e");
+      if (mounted) setState(() { _ttsState = TTSState.error; });
+      _processMessageQueue(); // Attempt to process next item in queue even if this one failed
+    }
+  }
+
+  @override
+  void dispose() {
+    _speech.stop();
+    _flutterTts.stop(); // Stop TTS and clear handlers if necessary
+    super.dispose();
   }
 
   void _listen() async {
@@ -180,16 +275,25 @@ class _AICoachChatWidgetState extends State<AICoachChatWidget> {
                   decoration: const InputDecoration(
                     hintText: "Type your message here...",
                   ),
-                  onSubmitted: (value) => _sendMessage(),
+                  onSubmitted: (_isWaitingForAI || (_sttState != STTState.idle && _sttState != STTState.error)) ? null : (value) => _sendMessage(),
+                  enabled: !(_isWaitingForAI || (_sttState != STTState.idle && _sttState != STTState.error)),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.send),
-                onPressed: (_sttState == STTState.processing || _sttState == STTState.listening)
-                    ? null // Disable send button while listening/processing speech
-                    : _sendMessage,
-              ),
-              if (_sttState == STTState.listening || _sttState == STTState.processing || _sttState == STTState.error)
+              _isWaitingForAI
+                  ? const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2.0)),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.send),
+                      onPressed: (_sttState == STTState.processing || _sttState == STTState.listening || _isWaitingForAI)
+                          ? null
+                          : _sendMessage,
+                    ),
+              if (!_isWaitingForAI && (_sttState == STTState.listening || _sttState == STTState.processing || _sttState == STTState.error))
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Text(
@@ -210,18 +314,17 @@ class _AICoachChatWidgetState extends State<AICoachChatWidget> {
                   _sttState == STTState.listening
                       ? Icons.mic_off
                       : _sttState == STTState.processing
-                          ? Icons.hourglass_top // Or a CircularProgressIndicator if handled differently
+                          ? Icons.hourglass_top
                           : _sttState == STTState.error
                               ? Icons.error_outline
                               : Icons.mic,
                 ),
                 color: _sttState == STTState.listening
-                    ? Theme.of(context).colorScheme.error // Active listening color
+                    ? Theme.of(context).colorScheme.error
                     : _sttState == STTState.error
-                        ? Theme.of(context).colorScheme.error // Error color
-                        : Theme.of(context).iconTheme.color, // Default color
-                // Disable button while processing, allow tap to stop if listening, allow tap to retry if error or idle
-                onPressed: (_sttState == STTState.processing && !_speech.isAvailable) ? null : _listen,
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).iconTheme.color,
+                onPressed: _isWaitingForAI ? null : ((_sttState == STTState.processing && !_speech.isAvailable) ? null : _listen),
               ),
             ],
           ),
