@@ -26,6 +26,10 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>This app requires microphone access to enable voice input for chat messages.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>This app requires speech recognition access to convert your voice into text for chat messages.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
