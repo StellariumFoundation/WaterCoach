@@ -16,6 +16,7 @@ dependencies:
   speech_to_text: ^6.3.0 # Added speech_to_text
   permission_handler: ^11.0.1 # Added permission_handler
   flutter_tts: ^3.8.3 # Added flutter_tts
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:
