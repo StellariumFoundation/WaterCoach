@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:water_coach/widgets/kanban_board_widget.dart'; // Added KanbanBoardWidget import
+import 'package:water_coach/widgets/task_dialog.dart'; // Added TaskDialog import
 
 class WaterCoachPage extends StatefulWidget {
   const WaterCoachPage({super.key});
@@ -114,117 +116,34 @@ class _WaterCoachPageState extends State<WaterCoachPage> {
 
   @override
   Widget build(BuildContext context) {
-    double progress = _dailyGoal == 0 ? 0 : _waterIntake / _dailyGoal;
-    if (progress < 0) progress = 0;
-    if (progress > 1) progress = 1;
+    // double progress = _dailyGoal == 0 ? 0 : _waterIntake / _dailyGoal; // Original progress logic
+    // if (progress < 0) progress = 0;
+    // if (progress > 1) progress = 1;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Water Intake Coach'), // Slightly more descriptive title
-        centerTitle: true, // Center title
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_note), // More descriptive icon for editing goal
-            onPressed: _editGoal,
-            tooltip: 'Edit Daily Goal',
-          ),
-        ],
+        title: const Text('Project Tasks'), // Updated title
+        centerTitle: true,
+        // actions: [ // Original actions removed for now, can be re-added if needed
+        //   IconButton(
+        //     icon: const Icon(Icons.edit_note),
+        //     onPressed: _editGoal,
+        //     tooltip: 'Edit Daily Goal',
+        //   ),
+        // ],
       ),
-      body: SingleChildScrollView( // Make content scrollable
-        child: Padding(
-          padding: const EdgeInsets.all(20.0), // Increased padding
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch children like progress bar
-            children: <Widget>[
-              const SizedBox(height: 10),
-              Text(
-                'Your Daily Water Goal:',
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
-              Text(
-                '$_dailyGoal ml',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 30),
-              Text(
-                'Current Intake:',
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
-              Text(
-                '$_waterIntake ml',
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              LinearProgressIndicator(
-                value: progress,
-                minHeight: 30, // Thicker progress bar
-                backgroundColor: Colors.grey[300],
-                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                borderRadius: BorderRadius.circular(15), // Rounded corners
-              ),
-              const SizedBox(height: 10),
-              Text(
-                '${(progress * 100).toStringAsFixed(0)}% of your goal',
-                style: Theme.of(context).textTheme.labelLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              Text(
-                'Add Water:',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 15),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.local_drink),
-                    label: const Text('250ml Glass'),
-                    onPressed: () => _addWater(250),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      textStyle: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.opacity_rounded), // Different icon for bottle
-                    label: const Text('500ml Bottle'),
-                    onPressed: () => _addWater(500),
-                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      textStyle: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 40),
-              Center( // Center the reset button
-                child: TextButton.icon(
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Reset Daily Intake'),
-                  onPressed: _resetIntake,
-                  style: TextButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.error,
-                    textStyle: Theme.of(context).textTheme.labelLarge,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20), // Bottom padding
-            ],
-          ),
-        ),
+      body: const KanbanBoardWidget(), // Replaced body with KanbanBoardWidget
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return const TaskDialog(); // Show TaskDialog for creating new task
+            },
+          );
+        },
+        tooltip: 'Add Task',
+        child: const Icon(Icons.add),
       ),
     );
   }
