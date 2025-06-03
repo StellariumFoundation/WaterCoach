@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.7.10' // Example version, can be updated
+    ext.kotlin_version = '1.9.10' // Updated for flutter_tts
     repositories {
         google()
         mavenCentral()
