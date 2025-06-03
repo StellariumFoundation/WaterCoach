@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:water_coach/water_coach_page.dart';
+import 'package:firebase_core/firebase_core.dart'; // Added firebase_core
+import 'firebase_options.dart'; // Added firebase_options
 
-void main() {
+void main() async { // Modified to be async
+  WidgetsFlutterBinding.ensureInitialized(); // Ensured initialization
+  await Firebase.initializeApp( // Initialized Firebase
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
