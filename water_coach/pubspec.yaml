@@ -17,6 +17,11 @@ dependencies:
   permission_handler: ^11.0.1 # Added permission_handler
   flutter_tts: ^3.8.3 # Added flutter_tts
   uuid: ^4.5.1
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.15.2
+  cloud_firestore: ^4.13.1
+  google_sign_in: ^6.1.5
+  flutter_secure_storage: ^9.0.0
 
 dev_dependencies:
   flutter_test:
