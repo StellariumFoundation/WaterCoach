@@ -1,5 +1,6 @@
+[Project Logo/Banner Placeholder - Add your awesome logo here!]
 
-# ⛲ Water Coach
+# Water Coach
 
 **Unlock Your Potential, One Sip at a Time.**
 
